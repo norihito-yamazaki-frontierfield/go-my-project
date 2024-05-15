@@ -3,11 +3,24 @@ package main
 import "testing"
 
 func TestHello(t *testing.T) {
-    got := Hello("Chris")
-    want := "Hello, Chris"
+    Core(t);
+}
 
-    if got != want {
-		// `f`は、プレースホルダー値％qに値が挿入された文字列を作成できる形式
-        t.Errorf("got %q want %q", got, want)
-    }
+func Core(t *testing.T) {
+    t.Run("saying hello to people", func(t *testing.T) {
+        got := Hello("Chris")
+        want := "Hello, Chris"
+
+        if got != want {
+            t.Errorf("got %q want %q", got, want)
+        }
+    })
+    t.Run("say 'Hello, World' when an empty string is supplied", func(t *testing.T) {
+        got := Hello("")
+        want := "Hello, World"
+
+        if got != want {
+            t.Errorf("got %q want %q", got, want)
+        }
+    })
 }

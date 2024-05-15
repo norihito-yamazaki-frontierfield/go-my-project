@@ -14,6 +14,20 @@ $ golangci-lint --version
 
 ```
 
+.vscode/settings.json
+
+```json
+{
+    "go.lintTool": "golangci-lint",
+    "go.lintFlags": ["--fast"],
+    "go.lintOnSave": "package",
+    "go.useLanguageServer": true,
+    "go.formatTool": "gofmt",
+    "go.testFlags": ["-v"]
+}
+
+```
+
 ## 実行
 
 
