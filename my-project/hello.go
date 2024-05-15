@@ -14,16 +14,22 @@ const spanishHelloPrefix = "Hola, "
 const frenchHelloPrefix = "Bonjour, "
 
 func Hello(name string, language string) string {
-    finalName := name
-    if finalName == "" {
-        finalName = "World"
+    if name == "" {
+        name = "World"
     }
 
-    if language == spanish {
-        return spanishHelloPrefix + finalName
+    return greetingPrefix(language) + name
+}
+
+func greetingPrefix(language string) (prefix string) {
+    switch language {
+    case french:
+        prefix = frenchHelloPrefix
+    case spanish:
+        prefix = spanishHelloPrefix
+    default:
+        prefix = englishHelloPrefix
     }
-    if language == french {
-        return frenchHelloPrefix + finalName
-    }
-    return englishHelloPrefix + finalName
+	// return prefixではなくreturnを呼び出すだけで、設定されているものを返すことができます。
+    return
 }
