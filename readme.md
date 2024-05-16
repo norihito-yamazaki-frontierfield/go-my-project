@@ -656,3 +656,263 @@ Hello,
  world!
 */
 ```
+
+
+最も一般的な形で、インターフェース要素は任意の型項T、もしくは基底型Tを指定する形式の~T、または項の和t1|t2|…|tnとして表されます
+```go
+package main
+
+import (
+	"fmt"
+)
+
+type MyInt int
+
+type EnhancedInt int
+
+// EnhancedInt のための String メソッド
+func (e EnhancedInt) String() string {
+	return fmt.Sprintf("EnhancedInt: %d", e)
+}
+
+type Float32 float32
+type Float64 float64
+
+// displayStringable は IntStringer 型制約を満たす任意の型 T の値を表示します
+func displayStringable[T IntStringer](value T) {
+	fmt.Println("IntStringer:", value.String())
+}
+
+// displayFloat は Float 型制約を満たす任意の型 T の値を表示します
+func displayFloat[T Float](value T) {
+	fmt.Printf("Float: %v\n", value)
+}
+
+// IntStringer は、基底型が int で String メソッドを実装する型のインターフェースです
+type IntStringer interface {
+	~int
+	String() string
+}
+
+// Float は float32 または float64 の型制約を持つインターフェースです
+type Float interface {
+	~float32 | ~float64
+}
+
+func main() {
+	var ei EnhancedInt = 42
+	displayStringable(ei) // EnhancedInt は IntStringer を満たす
+
+	var f32 Float32 = 3.14
+	displayFloat(f32) // Float32 は Float を満たす
+}
+
+/*
+IntStringer: EnhancedInt: 42
+Float: 3.14
+
+*/
+```
+
+
+# Goのアクセス修飾子
+
+
+Goでは、シンボル（変数var、タイプtype、関数func）が小文字の記号で始まっている場合は、それは定義されているパッケージの外側のプライベートなものです。
+
+## 例
+
+```go
+package mypackage
+
+// PublicFunction は他のパッケージからもアクセス可能な公開関数です。
+func PublicFunction() {
+    // 何か処理を行う
+}
+
+// privateFunction はmypackage内でのみアクセス可能な非公開関数です。
+func privateFunction() {
+    // 何か処理を行う
+}
+
+```
+
+
+# Go言語の `&` シンボルについて
+
+Go言語において、`&` シンボルはアドレス演算子として使用され、特定の変数のメモリアドレスを取得するのに使います。この機能は、ポインタを通じて変数の参照を渡す際に重要です。
+
+## アドレス演算子 `&`
+
+アドレス演算子 `&` は、変数の前に置かれることで、その変数が格納されているメモリのアドレスを返します。これにより、変数の実際の場所を指し示すポインタが得られます。
+
+### 使用例
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	var a int = 58
+	fmt.Println("Value of a:", a)    // aの値
+	fmt.Println("Address of a:", &a) // aのメモリアドレス
+}
+
+/*
+Value of a: 58
+Address of a: 0xc00010e010
+*/
+
+```
+
+この例では、整数型の変数 a が定義されており、&a によってそのメモリアドレスが表示されます。
+
+### ポインタとの関連
+& シンボルで取得したアドレスは、ポインタ変数に格納することができます。ポインタは、そのアドレスに格納されている値にアクセスしたり、変更したりするために使用されます。
+
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	var a int = 100
+	var p *int = &a
+	fmt.Println("Value of a:", *p) // ポインタpを通じてaの値にアクセス
+}
+// Value of a: 100
+
+```
+
+このコードでは、`a` のアドレスをポインタ `p` に格納し、`*p` で `a` の値にアクセスしています。
+
+このように、`&` シンボルはポインタと密接に関連しており、Goのポインタを理解するために不可欠な部分です。
+
+
+```go
+type Wallet struct {
+    balance int
+}
+
+// ポインタレシーバーを使用してbalanceを返す
+func (w *Wallet) Balance() int {
+    return w.balance  // 自動的に (*w).balance として扱われる
+}
+
+```
+
+
+## Method values
+
+
+```go
+package main
+
+import "fmt"
+
+// Person 構造体定義
+type Person struct {
+	Name string
+	Age  int
+}
+
+// Greet メソッドは、Personのインスタンスに対して挨拶を行います。
+func (p Person) Greet() {
+	fmt.Printf("Hello, my name is %s and I am %d years old.\n", p.Name, p.Age)
+}
+
+func main() {
+	// Personのインスタンスを作成
+	alice := Person{Name: "Alice", Age: 30}
+
+	// Greetメソッドのメソッド値を取得
+	greetFunc := alice.Greet
+
+	// 変数aliceのプロパティを変更
+	alice.Name = "Alicia"
+	alice.Age = 31
+
+	// メソッド値を呼び出す
+	greetFunc() // "Hello, my name is Alice and I am 30 years old."が出力される
+
+	// 直接メソッドを呼び出すと、更新された情報が出力される
+	alice.Greet() // "Hello, my name is Alicia and I am 31 years old."が出力される
+}
+
+/*
+
+Hello, my name is Alice and I am 30 years old.
+Hello, my name is Alicia and I am 31 years old.
+
+*/
+```
+
+
+pt := &t という操作により、pt は t のアドレス、つまりポインタを保持しているため、pt と t は同じメモリ領域を指しています。したがって、pt を通じて行われる変更は t に影響を及ぼし、その逆も同様です。
+```go
+
+package main
+
+import "fmt"
+
+type T struct {
+	a int
+}
+
+// 値レシーバを使ったメソッド
+func (tv T) Mv() {
+	fmt.Printf("Mv: 値レシーバの値は %d\n", tv.a)
+}
+
+// ポインタレシーバを使ったメソッド
+func (tp *T) Mp() {
+	fmt.Printf("Mp: ポインタレシーバの値は %d\n", tp.a)
+}
+
+func main() {
+	t := T{a: 10}
+	pt := &t
+
+	t.a = 20
+
+	// ポインタから値レシーバのメソッドを呼び出し
+	pt.Mv() // 自動的にポインタが指す値 (*pt) にアクセスして実行
+
+	// 値からポインタレシーバのメソッドを呼び出し
+	t.Mp() // 自動的にtのアドレス (&t) が取られて実行
+}
+
+/*
+Mv: 値レシーバの値は 20
+Mp: ポインタレシーバの値は 20
+
+*/
+```
+
+## errcheck
+
+```bash
+go install github.com/kisielk/errcheck@latest
+
+ls /Users/n.yamazaki/go/bin/errcheck
+chmod +x /Users/n.yamazaki/go/bin/errcheck
+
+export PATH=$PATH:/Users/n.yamazaki/go/bin
+#コードを含むディレクトリ内で 
+errcheck .
+```
+
+- エラーの見逃し防止:
+errcheck は、エラーチェックが行われていない関数呼び出しを検出します。これにより、潜在的なバグや予期しない動作を防ぐことができます。
+
+- シンプルなインターフェース:
+コマンドラインツールとして動作し、指定したディレクトリ内の全ての Go ソースコードを解析します。
+
+## nil
+ポインタはnilにすることができます
+
+関数が何かへのポインターを返すとき、それがnilであるかどうかを確認する必要があります。そうでない場合、ランタイム例外が発生する可能性があります。コンパイラーはここでは役立ちません。
+
+欠落している可能性のある値を説明する場合に役立ちます
