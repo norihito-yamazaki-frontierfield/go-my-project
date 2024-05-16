@@ -265,7 +265,7 @@ go test -bench=.
 go test -bench="."
 ```
 
-```plaintext
+```text
 goos: darwin
 goarch: amd64
 pkg: github.com/quii/learn-go-with-tests/for/v4
@@ -307,7 +307,7 @@ go mod init github.com/username/project
 
 このコマンドにより、go.mod ファイルが次のように作成されます：
 
-```go
+```text
 module github.com/username/project
 
 go 1.22.2
@@ -374,4 +374,285 @@ require (
 replace example.com/thatmodule => ../thatmodule // モジュールの置き換え: 特定のモジュールをローカルディレクトリや別のバージョンに置き換え。
 
 exclude example.com/thismodule v1.3.0 // バージョンの除外: 特定のバージョンのモジュールを除外。
+```
+
+
+## Go言語のメソッド宣言
+
+### 基本構文
+
+Go言語におけるメソッドは、特定の型に関連付けられた関数です。メソッドを宣言するための基本的な構文は以下の通りです。
+
+```go
+MethodDecl = "func" Receiver MethodName Signature [ FunctionBody ] .
+Receiver   = Parameters .
+```
+※「.（ドット）」は、その文法ルールの終端を表しています。
+Receiverは、メソッドが操作を行う対象の型を指定します。
+
+### レシーバーの定義
+レシーバーはメソッドの実行対象となる型で、メソッド名の前にパラメータセクションとして指定されます。以下はレシーバーを使用したメソッドの例です。
+
+
+```go
+package main
+
+import (
+	"fmt"
+)
+
+type Point struct {
+	x float64
+	y float64
+}
+
+// 値渡しのメソッド（レシーバーが値）
+func (p Point) Move(dx, dy float64) Point {
+	p.x += dx
+	p.y += dy
+	return p // 新しい位置のPointを返す
+}
+
+// 参照渡しのメソッド（レシーバーがポインタ）
+func (p *Point) Scale(factor float64) {
+	p.x *= factor
+	p.y *= factor
+}
+
+func main() {
+	p := Point{2.0, 3.0}
+
+	// Moveメソッドを使ってポイントを移動（値渡し）
+	movedPoint := p.Move(3.0, 4.0)
+	fmt.Printf("Original Point after Move: {%.1f %.1f}\n", p.x, p.y)              // 元のポイントは変わらない
+	fmt.Printf("New Point after Move: {%.1f %.1f}\n", movedPoint.x, movedPoint.y) // 新しい位置のポイント
+
+	// Scaleメソッドを使ってポイントをスケール（参照渡し）
+	p.Scale(2.0)
+	fmt.Printf("Point after Scale: {%.1f %.1f}\n", p.x, p.y) // 元のポイントがスケールされる
+}
+
+/*
+Original Point after Move: {2.0 3.0}
+New Point after Move: {5.0 7.0}
+Point after Scale: {4.0 6.0}
+*/
+
+```
+
+上記の例では、Point型にLengthとScaleという二つのメソッドが定義されており、それぞれが*Point型のレシーバーを持っています。
+
+### ジェネリック型を持つレシーバー
+Go言語のジェネリックを用いることで、より汎用的なメソッドを実装することが可能です。以下はジェネリック構造体Pairとそのメソッドの例です。
+
+```go
+package main
+
+import (
+	"fmt"
+)
+
+// Pairはジェネリックな構造体で、2つの異なる型Type1とType2の値を格納します。
+type Pair[Type1, Type2 any] struct {
+	a Type1
+	b Type2
+}
+
+// Swapメソッドは、Pairの要素の位置を交換し、新しい型のPairを返します。
+func (p Pair[Type1, Type2]) Swap() Pair[Type2, Type1] {
+	return Pair[Type2, Type1]{a: p.b, b: p.a}
+}
+
+// Firstメソッドは、Pairの最初の要素（Type1）を返します。
+func (p Pair[Type1, _]) First() Type1 {
+	return p.a
+}
+
+func main() {
+	// intとstringのペアを作成
+	pair := Pair[int, string]{a: 1, b: "apple"}
+
+	// Swapメソッドを使って、要素の順序を交換
+	swappedPair := pair.Swap()
+	fmt.Printf("Original Pair: {%v, %v}\n", pair.a, pair.b)
+	fmt.Printf("Swapped Pair: {%v, %v}\n", swappedPair.a, swappedPair.b)
+
+	// Firstメソッドを使って、元のペアの最初の要素を取得
+	firstElement := pair.First()
+	fmt.Printf("First element of the original pair: %v\n", firstElement)
+}
+
+/*
+Original Pair: {1, apple}
+Swapped Pair: {apple, 1}
+First element of the original pair: 1
+*/
+
+```
+
+Pair型は二つの異なる型AとBを持ち、Swapメソッドはこれらの型を逆転させた新しいPairを返します。また、FirstメソッドはPairの最初の要素を返します。
+
+
+## [Interface types](https://go.dev/ref/spec#Interface_types)
+
+インターフェイスタイプの初期化されていない変数の値はnilです。Goでは、インターフェースの解決は暗黙的です。
+
+
+**インターフェース要素**
+インターフェースタイプは、interfaceキーワードを使用して定義され、その本体は中括弧 {} で囲まれます。インターフェースの本体内には、メソッド要素と型要素のいずれか、または両方が含まれることがあります。
+
+**メソッド要素**
+メソッド要素は、インターフェースが要求するメソッドのシグネチャを定義します。このシグネチャには、メソッド名とパラメータ、戻り値の型が含まれます。例えば、Read([]byte) (int, error) は Read メソッドが []byte 型の引数を取り、int と error を返すことを要求するメソッド要素です。
+
+**タイプ要素**
+タイプ要素は、型項のユニオン（合併）を定義します。型項は、具体的な型（例：int、string）またはその型の基底型を指定します。基底型を指定するには、~ 記号を型の前に置きます（例：~int）。これは、int型を基底型とするすべての型を表します。タイプ要素は、インターフェースがどのような型を受け入れるかを広げるために使用されます。
+
+```go
+interface {
+    Read([]byte) (int, error)   // メソッド要素
+    ~int | string               // タイプ要素（intの基底型またはstring型のどちらか）
+}
+
+```
+
+
+あるインターフェース（この例ではFileインターフェース）が特定のメソッド（Read, Write, Close）を要求する場合、これらのメソッドを全て実装している任意の型はそのインターフェースを実装していると見なされます。つまり、S1とS2という二つの型が同じメソッドセットを持っている場合、FileインターフェースはS1とS2の両方によって実装されることになります。
+```go
+package main
+
+import (
+	"fmt"
+)
+
+// FileインターフェースはRead、Write、Closeメソッドを要求します。
+type File interface {
+	Read(p []byte) (n int, err error)
+	Write(p []byte) (n int, err error)
+	Close() error
+}
+
+// S1型の定義
+type S1 struct{}
+
+func (s S1) Read(p []byte) (int, error) {
+	// Readの実装
+	return len(p), nil
+}
+
+func (s S1) Write(p []byte) (int, error) {
+	// Writeの実装
+	return len(p), nil
+}
+
+func (s S1) Close() error {
+	// Closeの実装
+	return nil
+}
+
+// S2型の定義
+type S2 struct{}
+
+func (s S2) Read(p []byte) (int, error) {
+	// Readの実装
+	return len(p), nil
+}
+
+func (s S2) Write(p []byte) (int, error) {
+	// Writeの実装
+	return len(p), nil
+}
+
+func (s S2) Close() error {
+	// Closeの実装
+	return nil
+}
+
+// 汎用的な関数でFileインターフェースを使用
+func useFile(f File) {
+	data := make([]byte, 100)
+	f.Read(data)
+	f.Write(data)
+	f.Close()
+	fmt.Println("Used a File interface")
+}
+
+func main() {
+	var f1 File = S1{}
+	var f2 File = S2{}
+
+	useFile(f1)
+	useFile(f2)
+}
+/*
+Used a File interface
+Used a File interface
+*/
+```
+
+**インターフェースの埋め込み**
+インターフェース内に他のインターフェースを埋め込むことができます。
+ただし、埋め込みインターフェース間で同名のメソッドが存在する場合は、そのシグネチャが完全に一致する必要があります。もしシグネチャが異なる場合、それはコンパイルエラーを引き起こします。
+
+```go
+package main
+
+import (
+    "fmt"
+    "io"
+    "strings"
+)
+
+// ReaderインターフェースはReadメソッドを要求します。
+type Reader interface {
+    Read(p []byte) (n int, err error)
+}
+
+// WriterインターフェースはWriteメソッドを要求します。
+type Writer interface {
+    Write(p []byte) (n int, err error)
+}
+
+// ReadWriterはReaderとWriterのメソッドを含みます。
+type ReadWriter interface {
+    Reader
+    Writer
+}
+
+// myBufferはReadWriterインターフェースを実装します。
+type myBuffer struct {
+    buf string
+}
+
+// Readメソッドの実装
+func (b *myBuffer) Read(p []byte) (int, error) {
+    n := copy(p, b.buf)
+    b.buf = b.buf[n:]
+    return n, nil
+}
+
+// Writeメソッドの実装
+func (b *myBuffer) Write(p []byte) (int, error) {
+    b.buf += string(p)
+    return len(p), nil
+}
+
+func main() {
+    var rw ReadWriter = &myBuffer{}
+
+    // 文字列を書き込む
+    rw.Write([]byte("Hello, world!"))
+    // バッファから読み取る
+    buf := make([]byte, 6)
+    rw.Read(buf)
+    fmt.Println(string(buf))  // "Hello," を出力
+
+    // 残りを読み取る
+    buf = make([]byte, 20)
+    n, _ := rw.Read(buf)
+    fmt.Println(string(buf[:n]))  // " world!" を出力
+}
+/*
+Hello,
+ world!
+*/
 ```
