@@ -182,7 +182,63 @@ func main() {
     }
 }
 
+/*
+rangeは配列の反復処理を行うことができる。呼び出されるたびにインデックスと値の2つの値を返します。ここではインデックスの値を無視して _ 空（スペース）の識別子を使用しています。
+[5]int を期待する関数に [4]int を渡そうとしてもコンパイルできません。
+*/
+func Sum(numbers [5]int) int {
+    sum := 0
+    for _, number := range numbers {
+        sum += number
+    }
+    return sum
+}
 ```
+
+## Slices
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	// 配列の定義：固定長
+	var myArray [3]int = [3]int{1, 2, 3}
+	fmt.Println("配列:", myArray)
+
+	// 配列の要素を変更（可能）
+	myArray[0] = 10
+	fmt.Println("変更後の配列:", myArray)
+
+	// 配列の長さは固定
+	fmt.Println("配列の長さ:", len(myArray))
+
+	// スライスの定義：動的長
+	var mySlice []int = []int{1, 2, 3}
+	fmt.Println("スライス:", mySlice)
+
+	// スライスに要素を追加（動的に長さを増やせる）
+	mySlice = append(mySlice, 4)
+	fmt.Println("要素を追加したスライス:", mySlice)
+
+	// スライスの長さと容量は動的に変更可能
+	fmt.Println("スライスの長さ:", len(mySlice))
+	fmt.Println("スライスの容量:", cap(mySlice))
+}
+
+
+/*
+配列: [1 2 3]
+変更後の配列: [10 2 3]
+配列の長さ: 3
+スライス: [1 2 3]
+要素を追加したスライス: [1 2 3 4]
+スライスの長さ: 4
+スライスの容量: 6
+*/
+```
+
 
 # Goのベンチマーク機能
 
