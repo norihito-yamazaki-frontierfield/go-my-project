@@ -97,6 +97,129 @@ func ExampleAdd() {
 注意点
 例関数から// Output: コメントを削除すると、その関数は単にコンパイルされるだけで実際には実行されません。出力を検証するコメントがないため、テストとしての機能は果たされなくなります。
 
+## 変数宣言
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+    // 1つの変数を宣言し、初期化します
+    var a = "initial"
+    // "initial"が表示されます
+    fmt.Println(a)
+
+    // 複数の変数を一度に宣言し、初期化します
+    var b, c int = 1, 2
+    // 1と2が表示されます
+    fmt.Println(b, c)
+
+    // Goは初期化された変数の型を推測します
+    var d = true
+    // trueが表示されます
+    fmt.Println(d)
+
+    // 初期化されない変数はゼロ値を持ちます。intのゼロ値は0です
+    var e int
+    // 0が表示されます
+    fmt.Println(e)
+
+    // 簡略化された変数宣言と初期化。関数内でのみ使用できます
+    f := "apple"
+    // "apple"が表示されます
+    fmt.Println(f)
+}
+
+```
+
+## 繰り返しはfor 飲み
+
+Goで繰り返し作業を行うには、 forが必要です。 Goには while、do、 untilキーワードはなく、forのみ使用できます。
+
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+    // 基本的な型。単一の条件付きループ
+    i := 1
+    for i <= 3 {
+        // 1, 2, 3が表示されます
+        fmt.Println(i)
+        i = i + 1
+    }
+
+    // クラシックな初期化/条件/後処理のforループ
+    for j := 0; j < 3; j++ {
+        // 0, 1, 2が表示されます
+        fmt.Println(j)
+    }
+
+    // N回繰り返しの別の方法。これは誤りです。正しくは以下のようにスライスや配列を使います。
+    nums := []int{0, 1, 2}
+    for i := range nums {
+        // "range 0", "range 1", "range 2"が表示されます
+        fmt.Println("range", i)
+    }
+
+    // 条件なしのforループ。breakやreturnがないと無限ループします
+    for {
+        // "loop"が表示されます
+        fmt.Println("loop")
+        break
+    }
+
+    // 次のループの反復に進むcontinue
+    for n := 0; n < 6; n++ {
+        if n%2 == 0 {
+            continue
+        }
+        // 1, 3, 5が表示されます
+        fmt.Println(n)
+    }
+}
+
+```
+
+# Goのベンチマーク機能
+
+Go言語におけるベンチマークの実装は、言語の強力な特徴の一つであり、テストの記述に非常に似ています。以下は、ベンチマーク関数の基本的な構造を示す例です。
+
+```go
+func BenchmarkRepeat(b *testing.B) {
+    for i := 0; i < b.N; i++ {
+        Repeat("a")
+    }
+}
+```
+
+このコード例では、testing.Bを利用しています。これにより、ベンチマーク関数内でb.Nというカウンタにアクセスでき、このカウンタはテストが実行される回数を制御します。ベンチマークが実行されると、この関数はb.N回実行され、その実行にかかる時間が計測されます。
+
+実際のコード実行回数（b.Nの値）は、ベンチマークフレームワークによって自動的に調整され、信頼性のある結果を得るために最適な回数が選ばれます。
+
+ベンチマークを実行するには、次のコマンドを使用します：
+```bash
+go test -bench=.
+
+
+# windows
+go test -bench="."
+```
+
+```plaintext
+goos: darwin
+goarch: amd64
+pkg: github.com/quii/learn-go-with-tests/for/v4
+10000000           136 ns/op
+PASS
+```
+
+この出力では、「136 ns/op」という結果が得られており、これは関数が平均で136ナノ秒かかることを意味します。この結果は、関数が10000000回実行された後のものです。
+
+
 
 ## Go Modules: `go mod init <modulepath>` の推奨理由
 
