@@ -916,3 +916,60 @@ errcheck は、エラーチェックが行われていない関数呼び出し�
 関数が何かへのポインターを返すとき、それがnilであるかどうかを確認する必要があります。そうでない場合、ランタイム例外が発生する可能性があります。コンパイラーはここでは役立ちません。
 
 欠落している可能性のある値を説明する場合に役立ちます
+
+
+## [map](https://go.dev/blog/maps)
+
+マップの興味深い特性は、マップをポインタとして渡さなくても変更できることです。
+
+```go
+
+type Dictionary map[string]string
+
+var ErrNotFound = errors.New("could not find the word you were looking for")
+
+func (d Dictionary) Search(word string) (string, error) {
+	definition, ok := d[word]
+	if !ok {
+		return "", ErrNotFound
+	}
+
+	return definition, nil
+}
+
+func (d Dictionary) Add(word, definition string) {
+	d[word] = definition
+}
+
+```
+
+
+```go
+// この初期化はだめ　マップがnil値になる
+var m map[string]string
+
+// OK
+var dictionary = map[string]string{}
+// OR
+var dictionary = make(map[string]string)
+```
+
+
+## [センチネルエラーの問題点](https://dave.cheney.net/2016/04/07/constant-errors)
+
+1. 変更可能な公開変数: io.EOFは公開変数であり、その値を変更することが可能です。このため、異なるパッケージやモジュールからこの値が変更されると、予期せぬ挙動やデバッグが困難な問題が発生する可能性があります。
+2. シングルトンではあるが定数ではない: io.EOFはシングルトンのように扱われるが、定数としての性質（不変性や一意性）を持っていません。たとえ同じ文字列でエラーを新たに作成したとしても、io.EOFと同一ではありません。
+
+
+### 改善案
+
+```go
+type Error string
+
+func (e Error) Error() string { return string(e) }
+
+const err = Error("EOF")
+fmt.Println(err == Error("EOF")) // true
+```
+
+ただし、センチネルエラーは基本的に使用すべきではありません。
