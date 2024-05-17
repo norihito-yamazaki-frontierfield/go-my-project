@@ -973,3 +973,74 @@ fmt.Println(err == Error("EOF")) // true
 ```
 
 ただし、センチネルエラーは基本的に使用すべきではありません。
+
+
+## 依存性注入
+
+https://andmorefine.gitbook.io/learn-go-with-tests/go-fundamentals/dependency-injection
+
+このページを簡単に要約
+
+1. 標準出力への書き込みを抽象化する
+Goのfmt.Printf関数は標準出力に直接書き込むため、テストが難しいです。代わりに、io.Writerインターフェースを利用して出力先を抽象化します。
+
+
+```go
+func Greet(writer io.Writer, name string) {
+    fmt.Fprintf(writer, "Hello, %s", name)
+}
+
+```
+この関数はどんなio.Writerも受け入れるため、テスト時にはバッファなどの代替出力先に置き換えることができます。
+
+2. テストの実装
+
+bytes.Bufferを使ってGreet関数をテストする方法です。このバッファはio.Writerを実装しており、テスト中に関数の出力をキャプチャします。
+
+
+```go
+func TestGreet(t *testing.T) {
+    buffer := bytes.Buffer{}
+    Greet(&buffer, "Chris")
+
+    got := buffer.String()
+    want := "Hello, Chris"
+    if got != want {
+        t.Errorf("got %q want %q", got, want)
+    }
+}
+
+```
+
+
+3. リアルな使用例
+
+Greet関数はHTTPサーバーのハンドラー内で再利用することができます。http.ResponseWriterはio.Writerを実装しているため、HTTP応答として直接使用することができます。
+
+```go
+package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+
+// Greet sends a personalised greeting to writer.
+func Greet(writer io.Writer, name string) {
+	fmt.Fprintf(writer, "Hello, %s", name)
+}
+
+// MyGreeterHandler says Hello, world over HTTP.
+func MyGreeterHandler(w http.ResponseWriter, r *http.Request) {
+	Greet(w, "world")
+}
+
+func main() {
+	err := http.ListenAndServe(":5000", http.HandlerFunc(MyGreeterHandler))
+
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+```
