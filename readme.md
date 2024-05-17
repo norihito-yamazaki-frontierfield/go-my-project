@@ -1158,3 +1158,238 @@ func TestCountdown(t *testing.T) {
 
 5. **フェイク (Fake)**:
    - フェイクは、実際のビジネスロジックを模倣するより複雑なテストダブルです。例えば、特定のユーザー名でのみ認証を許可するなど、異なる入力に基づいて異なる動作をすることができます。
+
+
+## 並列（concurrency）
+
+
+
+
+- https://go.dev/blog/race-detector
+- [機能させる、正しくする、速くする](https://wiki.c2.com/?MakeItWorkMakeItRightMakeItFast)
+- [早期最適化はすべての悪の根源](https://wiki.c2.com/?PrematureOptimization)
+
+
+Goのランタイムに管理される軽量なスレッドです。
+
+
+```go
+package main
+
+import (
+	"fmt"
+)
+
+type WebsiteChecker func(string) bool
+type result struct {
+	string
+	bool
+}
+
+func CheckWebsites(wc WebsiteChecker, urls []string) map[string]bool {
+	results := make(map[string]bool)
+     // Channels
+	resultChannel := make(chan result)
+
+	for _, url := range urls {
+		go func(u string) {
+			resultChannel <- result{u, wc(u)}
+		}(url)
+	}
+
+	for i := 0; i < len(urls); i++ {
+		result := <-resultChannel
+		results[result.string] = result.bool
+	}
+
+	return results
+}
+
+func mockWebsiteChecker(url string) bool {
+	if url == "http://badwebsite.com" {
+		return false
+	}
+	return true
+}
+
+func main() {
+	urls := []string{
+		"http://google.com",
+		"http://badwebsite.com",
+		"http://stackoverflow.com",
+	}
+
+	results := CheckWebsites(mockWebsiteChecker, urls)
+	fmt.Println(results)
+}
+/*
+map[http://badwebsite.com:false http://google.com:true http://stackoverflow.com:true]
+*/
+```
+
+### Channels
+チャネル( Channel )型は、チャネルオペレータの <- を用いて値の送受信ができる通り道です。
+
+```go
+ch <- v    // v をチャネル ch へ送信する
+v := <-ch  // ch から受信した変数を v へ割り当てる
+```
+(データは、矢印の方向に流れます)
+
+マップとスライスのように、チャネルは使う前に以下のように生成します:
+
+```go
+ch := make(chan int)
+```
+通常、片方が準備できるまで送受信はブロックされます。これにより、明確なロックや条件変数がなくても、goroutineの同期を可能にします。
+
+
+**Buffered Channels**
+
+チャネルは、 バッファ ( buffer )として使えます。 バッファを持つチャネルを初期化するには、 make の２つ目の引数にバッファの長さを与えます:
+
+`ch := make(chan int, 100)`
+
+バッファが詰まった時は、チャネルへの送信をブロックします。 バッファが空の時には、チャネルの受信をブロックします。
+
+
+### Range and Close
+
+
+```go
+package main
+
+import (
+	"fmt"
+)
+
+// fibonacci 関数はチャネル c を通じて n 個のフィボナッチ数を送信します。
+func fibonacci(n int, c chan int) {
+	x, y := 0, 1
+	for i := 0; i < n; i++ {
+		c <- x  // チャネル c にフィボナッチ数 x を送信
+		x, y = y, x+y  // 次のフィボナッチ数へと値を更新
+	}
+	close(c)  // これ以上送信する値がないことを示すためにチャネルを閉じます
+}
+
+func main() {
+	c := make(chan int, 10)  // サイズ10のバッファ付きチャネルを作成
+	go fibonacci(cap(c), c)  // 新しいゴルーチンで fibonacci 関数を起動
+
+	// チャネル c から値を受信します。チャネルが閉じられるまでループが続きます。
+	for i := range c {
+		fmt.Println(i)  // 受信したフィボナッチ数を出力
+	}
+
+	// チャネルが閉じているかどうかを確認するために、2つ目のパラメータ ok を使用
+	v, ok := <-c
+	if !ok {
+		fmt.Println("Channel is closed", v)  // チャネルが閉じている場合、ok は false になります
+	}
+}
+
+
+/*
+0
+1
+1
+2
+3
+5
+8
+13
+21
+34
+Channel is closed 0
+*/
+```
+
+### Select
+select ステートメントは、goroutineを複数の通信操作で待たせます。
+
+https://marketsplash.com/golang-select/
+https://www.sparkcodehub.com/golang-select-statement
+
+
+```go
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+// fibonacci 関数はフィボナッチ数列を生成し、チャネルを通じて数値を送信します。
+// また、quit チャネルからのシグナルを受け取ったら終了します。
+func fibonacci(c, quit chan int) {
+	x, y := 0, 1
+	for {
+		select {
+		case c <- x:
+			fmt.Println("fibonacci: Sending", x)
+			x, y = y, x+y
+		case <-quit:
+			fmt.Println("fibonacci: Quit signal received, exiting...")
+			return
+		}
+	}
+}
+/*
+1. チャネルの初期化: main 関数で、データ通信用の c チャネルと終了通知用の quit チャネルを作成します。
+2. ゴルーチンの起動: c チャネルからデータを受信するためのゴルーチンを起動し、10個のデータを受け取った後、quit チャネルに終了通知を送信します。
+3. フィボナッチ数列の生成: fibonacci 関数では、フィボナッチ数列を生成し、生成された数値を c チャネルに送信します。また、quit チャネルから終了通知が来た場合、ループを抜けて関数を終了します。
+4. 終了処理: 全ての処理が終了したことを main 関数の最後でログ出力し、プログラムを終了します。
+*/
+func main() {
+	fmt.Println("main: Starting program...")
+	c := make(chan int)
+	quit := make(chan int)
+
+	// 別のゴルーチンを起動し、チャネル c から10個のデータを受信します。
+	// すべて受信したら quit チャネルにシグナルを送ります。
+	go func() {
+		for i := 0; i < 10; i++ {
+			fmt.Printf("goroutine: Received %d from channel\n", <-c)
+		}
+		fmt.Println("goroutine: Received all numbers, sending quit signal...")
+		quit <- 0
+	}()
+
+	// フィボナッチ数列の生成と管理を行う関数をゴルーチンで起動します。
+	fibonacci(c, quit)
+
+	fmt.Println("main: Program finished.")
+}
+
+/*
+main: Starting program...
+goroutine: Received 0 from channel
+fibonacci: Sending 0
+fibonacci: Sending 1
+goroutine: Received 1 from channel
+goroutine: Received 1 from channel
+fibonacci: Sending 1
+fibonacci: Sending 2
+goroutine: Received 2 from channel
+goroutine: Received 3 from channel
+fibonacci: Sending 3
+fibonacci: Sending 5
+goroutine: Received 5 from channel
+goroutine: Received 8 from channel
+fibonacci: Sending 8
+fibonacci: Sending 13
+goroutine: Received 13 from channel
+goroutine: Received 21 from channel
+fibonacci: Sending 21
+fibonacci: Sending 34
+goroutine: Received 34 from channel
+goroutine: Received all numbers, sending quit signal...
+fibonacci: Quit signal received, exiting...
+main: Program finished.
+*/
+```
+
+
+### [sync.Mutex](https://go-tour-jp.appspot.com/concurrency/9)
+
