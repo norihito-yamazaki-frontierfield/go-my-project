@@ -1044,3 +1044,98 @@ func main() {
 	}
 }
 ```
+
+
+## mock
+
+interfaceを通じててUTする時なのでMockingを行う
+
+```go
+// main.go
+package main
+
+import (
+    "fmt"
+    "io"
+    "time"
+)
+
+// Sleeper interface defines a method for sleeping.
+type Sleeper interface {
+    Sleep(duration time.Duration)
+}
+
+// DefaultSleeper is a Sleeper that uses the real time.Sleep function.
+type DefaultSleeper struct{}
+
+func (d *DefaultSleeper) Sleep(duration time.Duration) {
+    time.Sleep(duration)
+}
+
+// Countdown counts down from a specified number to zero and then prints a final word.
+func Countdown(out io.Writer, sleeper Sleeper) {
+    for i := 3; i > 0; i-- {
+        sleeper.Sleep(1 * time.Second)
+        fmt.Fprintln(out, i)
+    }
+    sleeper.Sleep(1 * time.Second)
+    fmt.Fprint(out, "Go!")
+}
+
+func main() {
+    sleeper := &DefaultSleeper{}
+    Countdown(os.Stdout, sleeper)
+}
+
+// main_test.go
+package main
+
+import (
+    "bytes"
+    "testing"
+    "time"
+)
+
+// MockSleeper tracks the number of Sleep calls and the durations it was called with.
+type MockSleeper struct {
+    Calls     int
+    Durations []time.Duration
+}
+
+func (m *MockSleeper) Sleep(duration time.Duration) {
+    m.Calls++
+    m.Durations = append(m.Durations, duration)
+}
+
+func TestCountdown(t *testing.T) {
+    buffer := &bytes.Buffer{}
+    mockSleeper := &MockSleeper{}
+
+    Countdown(buffer, mockSleeper)
+
+    got := buffer.String()
+    want := "3\n2\n1\nGo!"
+
+    if got != want {
+        t.Errorf("got %q, want %q", got, want)
+    }
+
+    if mockSleeper.Calls != 4 {
+        t.Errorf("not enough calls to sleeper, want 4 got %d", mockSleeper.Calls)
+    }
+}
+
+
+
+```
+
+
+
+「[でも、模試やテストのせいで生活が苦しくなってきました!](https://andmorefine.gitbook.io/learn-go-with-tests/go-fundamentals/mocking#demoyatesutonoseidegashikunattekimashita)」いいこと書いてありました。
+
+- リファクタリングの定義では、コードは変更されますが、動作は同じです。理論的にリファクタリングを行うことに決めた場合は、テストを変更せずにコミットを実行できるはずです。だからテストを書くときは自問してください
+  - 必要な動作や実装の詳細をテストしていますか？
+  - このコードをリファクタリングする場合、テストに多くの変更を加える必要がありますか？
+- Goではプライベート関数をテストできますが、プライベート関数は実装に関係しているため、避けたいと思います。
+- テストが3つ以上のモックで動作している場合、それは危険信号であるように感じます（デザインを再検討する時間）
+- スパイは注意して使用してください。スパイを使用すると、作成中のアルゴリズムの内部を確認できます。これは非常に便利ですが、テストコードと実装の間の結合がより緊密になることを意味します。 これらをスパイする場合は、これらの詳細に注意してください
