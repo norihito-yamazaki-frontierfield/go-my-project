@@ -1390,6 +1390,77 @@ main: Program finished.
 */
 ```
 
+```go
+package main
 
-### [sync.Mutex](https://go-tour-jp.appspot.com/concurrency/9)
+import (
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"time"
+)
 
+func Racer(a, b string) (winner string) {
+	select {
+	case <-ping(a):
+		return a
+	case <-ping(b):
+		return b
+	}
+}
+
+func ping(url string) chan struct{} {
+	ch := make(chan struct{})
+	go func() {
+		http.Get(url)
+		close(ch)
+	}()
+	return ch
+}
+
+func makeDelayedServer(delay time.Duration) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(delay)
+		w.WriteHeader(http.StatusOK)
+	}))
+}
+
+func main() {
+	slowServer := makeDelayedServer(20 * time.Millisecond)
+	fastServer := makeDelayedServer(0 * time.Millisecond)
+
+	defer slowServer.Close()
+	defer fastServer.Close()
+
+	slowURL := slowServer.URL
+	fastURL := fastServer.URL
+
+	want := fastURL
+	got := Racer(slowURL, fastURL)
+
+	log.Printf("want: %s, got: %s", want, got)
+}
+// 2009/11/10 23:00:00 want: http://127.0.0.1:43173, got: http://127.0.0.1:43173
+```
+
+## テストにおける課題と解決策
+
+### 1. スロー（Slow）
+- **問題点:** 実際の外部依存サービス（データベースや外部APIなど）をテストに使用すると、テストの実行速度が遅くなります。
+- **解決策:** モックを使用して、これらの外部サービスの代わりに軽量なオブジェクトを注入することで、テストの実行速度を向上させます。
+
+### 2. フレーク状（Flaky）
+- **問題点:** 外部サービスに依存するテストは、サービスの可用性やネットワークの問題により、実行結果が不安定になりがちです。
+- **解決策:** モックを利用して、テストの結果を一貫して再現可能にし、テストの信頼性を高めます。
+
+### 3. エッジケースをテストできない（Can't test edge cases）
+- **問題点:** 外部サービスを直接利用すると、特定のエッジケースを意図的に作り出すことが困難です。
+- **解決策:** モックを用いて、エッジケースや特定の条件を自由に設定し、コードの堅牢性を確認します。
+
+モックや依存性注入を適切に利用することで、テストプロセスの効率と効果を大幅に向上させることができます。
+
+## [defer](https://go.dev/blog/defer-panic-and-recover)
+
+関数呼び出しの前にdeferを付けることで、その関数を含まれている関数の最後に呼び出します。
+
+これによってファイルの閉じ忘れや、サーバーがポートをリッスンし続けないようにサーバーを閉じるなどリソースをクリーンアップが関数おわし次第自動でされます。
