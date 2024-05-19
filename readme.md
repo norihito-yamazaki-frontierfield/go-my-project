@@ -1687,3 +1687,114 @@ func assertContains(t *testing.T, haystack []string, needle string) {
 }
 
 ```
+
+
+## WaitGroup
+
+WaitGroupは、ゴルーチンのコレクションが完了するのを待ちます。メインのゴルーチンはAddを呼び出して、待機するゴルーチンの数を設定します。次に、各ゴルーチンが実行され、完了したらDoneを呼び出します。同時に、すべてのゴルーチンが完了するまで、Waitを使用してブロックすることができます。
+アサーションを作成する前にwg.Wait()が完了するのを待つ
+
+Mutexは相互排他ロックです。ミューテックスのゼロ値は、ロックされていないミューテックスです。
+
+注意
+go vetで指摘されている問題は、「sync.Mutex（ミューテックス）を含む構造体を値としてコピーすることは、設計上誤りである」ということです。Go言語のドキュメントにもありますが、ミューテックスは使用開始後にコピーしてはいけません。これは、ミューテックスの内部状態が複製されると、ロックの整合性が保たれなくなる可能性があるためです。
+
+## チャネルとゴルーチンにロックを使用するのはいつですか？
+
+[ go wikiには、このトピック専用のページがあります。ミューテックスまたはチャネル](https://go.dev/wiki/MutexOrChannel)
+
+
+- データの所有権を渡すときにチャネルを使用する
+- 状態の管理にミューテックスを使用する
+
+1. チャネルを使用するケース: データの所有権の受け渡し
+チャネルは、異なるゴルーチン間でデータの所有権を安全に移動させるために設計されています。このアプローチは、データの生成者と消費者が明確に分かれている場合に特に有効です。
+
+```go
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+func produce(data chan<- int) {
+	for i := 0; i < 10; i++ {
+		data <- i // データをチャネルに送信
+		time.Sleep(time.Second) // デモのため1秒待つ
+	}
+	close(data) // データの送信が終了したことを通知
+}
+
+func consume(data <-chan int) {
+	for value := range data {
+		fmt.Printf("Received: %d\n", value)
+	}
+}
+
+func main() {
+	data := make(chan int)
+	go produce(data)
+	consume(data)
+}
+
+```
+
+2. ロック（ミューテックス）を使用するケース: 状態の管理
+複数のゴルーチンが共有リソースや状態にアクセスする場合、ミューテックスを使用して競合を防ぎます。この方法は、単一の共有状態に対して細かい制御が必要な場合に適しています。
+
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+	"time"
+)
+
+// 共有データ
+type Counter struct {
+	value int
+	mu    sync.Mutex
+}
+
+func (c *Counter) Increment() {
+	c.mu.Lock()
+	c.value++ // 値を安全にインクリメント
+	c.mu.Unlock()
+}
+
+func (c *Counter) Print() {
+	c.mu.Lock()
+	fmt.Printf("Value: %d\n", c.value)
+	c.mu.Unlock()
+}
+
+func main() {
+	counter := Counter{}
+
+	// 10個のゴルーチンで同時にインクリメント
+	for i := 0; i < 10; i++ {
+		go func() {
+			for j := 0; j < 10; j++ {
+				counter.Increment()
+				time.Sleep(time.Millisecond * 10)
+			}
+		}()
+	}
+
+	time.Sleep(time.Second * 2) // ゴルーチンが終了するのを待つ
+	counter.Print()
+}
+
+
+```
+
+
+## go vet
+
+go vet は Go プログラミング言語のためのツールです。このツールは、コードを静的解析して、コンパイラがキャッチできない種類のバグや疑わしい構成、一般的な間違いなどを見つけるのを助けます。たとえば、go vet は未使用の変数、不適切な型の引数や戻り値、未解決の参照、書式文字列の問題などを検出することができます。
+
+ビルドスクリプトで go vet を使用するというのは、ソフトウェア開発の一環として非常に良い習慣です。ビルドプロセスの一部として go vet を実行することで、コードをデプロイする前に問題を検出し、修正する機会を得ることができます。これにより、将来的なデバッグ作業が減少し、ソフトウェアの品質が向上します。
+
+ビルドスクリプトに go vet を組み込む具体的な方法としては、通常のビルドコマンドの前や後に go vet ./... のようなコマンドを追加することが一般的です。これは、カレントディレクトリとそのサブディレクトリに存在するすべてのGoファイルに対して go vet を実行します。
