@@ -1798,3 +1798,14 @@ go vet は Go プログラミング言語のためのツールです。このツ
 ビルドスクリプトで go vet を使用するというのは、ソフトウェア開発の一環として非常に良い習慣です。ビルドプロセスの一部として go vet を実行することで、コードをデプロイする前に問題を検出し、修正する機会を得ることができます。これにより、将来的なデバッグ作業が減少し、ソフトウェアの品質が向上します。
 
 ビルドスクリプトに go vet を組み込む具体的な方法としては、通常のビルドコマンドの前や後に go vet ./... のようなコマンドを追加することが一般的です。これは、カレントディレクトリとそのサブディレクトリに存在するすべてのGoファイルに対して go vet を実行します。
+
+
+## Context
+
+https://andmorefine.gitbook.io/learn-go-with-tests/go-fundamentals/context#nitesutowoku
+https://go.dev/blog/context
+キャンセルが特定のリクエストのコールスタック全体に伝播されるように、コンテキストを派生させることが重要です。
+
+
+[Michal Štrba](https://faiface.github.io/post/context-should-go-away-go2/)と私は同様の意見を持っています。
+> 私の（non-existent）会社でctx.Valueを使用すると、解雇されます
